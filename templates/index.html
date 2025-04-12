@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TubeFetch - YouTube Playlist Downloader</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <h1>🎬 TubeFetch - YouTube Playlist Downloader</h1>
+
+  <div class="container">
+    <input type="text" id="urlInput" placeholder="Enter YouTube Playlist URL">
+    <button onclick="searchVideos()">Search</button>
+    <div id="loading" class="hidden">🔍 Searching...</div>
+  </div>
+
+  <div id="totalCount"></div>
+
+  <h3>Video List</h3>
+  <table id="videoTable">
+    <thead>
+      <tr>
+        <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"></th>
+        <th>Title</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="videoList"></tbody>
+  </table>
+
+  <button onclick="downloadVideos()">Download Selected</button>
+
+  <div class="progress-container hidden">
+    <p>Downloading: <span id="downloadStatus">0%</span></p>
+    <progress id="downloadProgress" value="0" max="100"></progress>
+  </div>
+
+  <script>
+    let videoStatuses = {};
+
+    function searchVideos() {
+      let url = document.getElementById('urlInput').value;
+      document.getElementById('loading').classList.remove('hidden');
+
+      fetch('/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('loading').classList.add('hidden');
+        let videoList = document.getElementById('videoList');
+        videoList.innerHTML = '';
+
+        if (data.error) {
+          document.getElementById('totalCount').innerText = data.error;
+          return;
+        }
+
+        document.getElementById('totalCount').innerText = `Found ${data.total} videos`;
+
+        data.videos.forEach(video => {
+          // Use the safe_id provided by the backend
+          videoStatuses[video.safe_id] = "Pending";
+          let row = document.createElement('tr');
+          row.innerHTML = `
+            <td><input type="checkbox" class="videoCheckbox" value="${video.url}" data-safeid="${video.safe_id}"></td>
+            <td>${video.title}</td>
+            <td id="status-${video.safe_id}">Pending</td>
+          `;
+          videoList.appendChild(row);
+        });
+      });
+    }
+
+    function toggleSelectAll(source) {
+      let checkboxes = document.querySelectorAll('.videoCheckbox');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = source.checked;
+      });
+    }
+
+    function downloadVideos() {
+      let selectedVideos = [];
+      document.querySelectorAll('.videoCheckbox:checked').forEach(checkbox => {
+        selectedVideos.push({ url: checkbox.value, safe_id: checkbox.dataset.safeid });
+        document.getElementById(`status-${checkbox.dataset.safeid}`).innerText = "Downloading...";
+      });
+
+      if (selectedVideos.length === 0) {
+        alert("No videos selected!");
+        return;
+      }
+
+      document.querySelector(".progress-container").classList.remove("hidden");
+
+      fetch('/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ video_urls: selectedVideos })
+      })
+      .then(() => {
+        updateProgress();
+      });
+    }
+
+    function updateProgress() {
+      let progressBar = document.getElementById("downloadProgress");
+      let statusText = document.getElementById("downloadStatus");
+
+      let interval = setInterval(() => {
+        fetch('/progress')
+          .then(response => response.json())
+          .then(data => {
+            progressBar.value = data.progress;
+            statusText.innerText = data.progress + "%";
+
+            // Update each video's status using its safe ID as key
+            for (let safe_id in data.video_statuses) {
+              let statusElem = document.getElementById(`status-${safe_id}`);
+              if (statusElem) {
+                statusElem.innerText = data.video_statuses[safe_id];
+              }
+            }
+
+            if (data.progress >= 100) {
+              clearInterval(interval);
+              statusText.innerText = "Download Complete!";
+            }
+          });
+      }, 500);
+    }
+  </script>
+</body>
+</html>
