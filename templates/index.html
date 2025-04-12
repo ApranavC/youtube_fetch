@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>TubeFetch - YouTube Playlist Downloader</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
   <h1>🎬 TubeFetch - YouTube Playlist Downloader</h1>
@@ -15,6 +16,7 @@
   </div>
 
   <div id="totalCount"></div>
+  <div id="searchLogs" class="logs"></div>
 
   <h3>Video List</h3>
   <table id="videoTable">
@@ -41,6 +43,7 @@
     function searchVideos() {
       let url = document.getElementById('urlInput').value;
       document.getElementById('loading').classList.remove('hidden');
+      document.getElementById('searchLogs').innerText = "";
 
       fetch('/search', {
         method: 'POST',
@@ -59,6 +62,10 @@
         }
 
         document.getElementById('totalCount').innerText = `Found ${data.total} videos`;
+
+        if(data.logs) {
+          document.getElementById('searchLogs').innerText = data.logs.join("\n");
+        }
 
         data.videos.forEach(video => {
           // Use the safe_id provided by the backend

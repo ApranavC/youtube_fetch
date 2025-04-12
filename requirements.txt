@@ -3,3 +3,4 @@ yt-dlp
 requests
 pytube
 gunicorn
+# to run locally on windows add waitress

@@ -3,6 +3,8 @@ body {
     text-align: center;
     background-color: #1E1E1E;
     color: white;
+    margin: 0;
+    padding: 0;
 }
 
 .container {
@@ -52,4 +54,17 @@ th {
 
 td {
     background-color: #444;
+}
+
+/* Style for displaying search logs */
+.logs {
+    margin: 20px auto;
+    width: 80%;
+    text-align: left;
+    background-color: #2E2E2E;
+    padding: 10px;
+    border: 1px solid #555;
+    white-space: pre-wrap;
+    font-family: monospace;
+    font-size: 0.9em;
 }
